@@ -21,15 +21,16 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 	if len(bencodedString) == start {
 		return elems, start
 	}
-	slog.Info(fmt.Sprintf("start char %c", bencodedString[start]))
+	slog.Info(fmt.Sprintf("start char %s", bencodedString[start:]))
 	if rune(bencodedString[start]) == 'l' {
 		slog.Info("list detected")
 		encodedL, end := decodeBencode(bencodedString, []interface{}{}, start+1)
+		slog.Info(fmt.Sprintf("elems from list: %#v", encodedL))
 		elems = append(elems, encodedL)
 		return decodeBencode(bencodedString, elems, end)
 	} else if rune(bencodedString[start]) == 'e' {
 		slog.Info("detected end")
-		return decodeBencode(bencodedString, elems, start+1)
+		return elems, start + 1
 	} else if unicode.IsDigit(rune(bencodedString[start])) {
 		slog.Info("string detected")
 		var firstColonIndex int
