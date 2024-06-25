@@ -50,7 +50,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		return decodeBencode(bencodedString, elems, firstColonIndex+1+length)
 	} else if rune(bencodedString[start]) == 'i' {
 		slog.Info("integer detected")
-		l := start + peekUntil(bencodedString, start, 'e')
+		l := peekUntil(bencodedString, start, 'e')
 		startI := start + 1
 		i, err := strconv.Atoi(bencodedString[startI:l])
 		if err != nil {
@@ -58,7 +58,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		}
 		elem := i
 		elems = append(elems, elem)
-		return decodeBencode(bencodedString, elems, start+l)
+		return decodeBencode(bencodedString, elems, l+1)
 	} else {
 		panic("not supported type")
 	}
