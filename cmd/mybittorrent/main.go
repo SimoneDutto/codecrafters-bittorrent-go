@@ -5,6 +5,7 @@ import (
 	// "encoding/json"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"unicode"
@@ -38,9 +39,15 @@ func decodeBencode(bencodedString string) (interface{}, error) {
 	}
 }
 
+func init() {
+	if level, err := strconv.ParseBool(os.Getenv("LOG")); err != nil || !level {
+		slog.SetLogLoggerLevel(slog.LevelError)
+	}
+}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
+	slog.Info("Logs from your program will appear here!")
 
 	command := os.Args[1]
 
