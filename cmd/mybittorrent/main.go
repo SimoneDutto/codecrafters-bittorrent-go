@@ -110,6 +110,23 @@ func main() {
 			}
 			fmt.Println(string(jsonOutput))
 		}
+	} else if command == "info" {
+		file := os.Args[2]
+		bF, err := os.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
+		metaInfo, ok := decoded[0].(map[string]interface{})
+		if !ok {
+			panic("cannot get map from decoded file")
+		}
+		fmt.Printf("Tracker URL: %s\n", metaInfo["announce"])
+		infoM, ok := metaInfo["info"].(map[string]interface{})
+		if !ok {
+			panic("cannot get map info from metainfo")
+		}
+		fmt.Printf("Length: %d", infoM["length"])
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
