@@ -126,18 +126,14 @@ func main() {
 		if !ok {
 			panic("cannot get map info from metainfo")
 		}
-		fmt.Printf("Length: %d", infoM["length"])
+		fmt.Printf("Length: %d\n", infoM["length"])
+		jsonOutput, err := json.Marshal(infoM)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Info Hash: %s", calcSha1(jsonOutput))
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
 	}
-}
-
-func peekUntil(s string, start int, charEnd rune) int {
-	for i := start; i < len(s); i++ {
-		if s[i] == byte(charEnd) {
-			return i
-		}
-	}
-	panic("cannot find peek char")
 }
