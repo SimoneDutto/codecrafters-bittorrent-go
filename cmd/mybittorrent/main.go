@@ -12,6 +12,14 @@ import (
 	// bencode "github.com/jackpal/bencode-go" // Available if you need it!
 )
 
+type Bee struct {
+	v interface{}
+}
+
+func (*Bee) PushElem(elem interface{}) {
+
+}
+
 // Example:
 // - 5:hello -> hello
 // - 10:hello12345 -> hello12345
@@ -31,6 +39,19 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 	} else if rune(bencodedString[start]) == 'e' {
 		slog.Info("detected end")
 		return elems, start + 1
+	} else if rune(bencodedString[start]) == 'd' {
+		encodedL, end := decodeBencode(bencodedString, []interface{}{}, start+1)
+		m := make(map[string]interface{})
+		for i := 0; i < len(encodedL); i += 2 {
+			val, ok := encodedL[i].(string)
+			if !ok {
+				panic("dictionary key is not string")
+			}
+			m[val] = encodedL[i+1]
+		}
+		slog.Info(fmt.Sprintf("elems from map: %#v", m))
+		elems = append(elems, m)
+		return decodeBencode(bencodedString, elems, end)
 	} else if unicode.IsDigit(rune(bencodedString[start])) {
 		slog.Info("string detected")
 		var firstColonIndex int
@@ -43,7 +64,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		lengthStr := bencodedString[start:firstColonIndex]
 		length, err := strconv.Atoi(lengthStr)
 		if err != nil {
-			panic("cannot convert string len")
+			panic("cannot convert string len array")
 		}
 
 		elem := bencodedString[firstColonIndex+1 : firstColonIndex+1+length]
@@ -81,8 +102,14 @@ func main() {
 		decoded, end := decodeBencode(bencodedValue, []interface{}{}, 0)
 		slog.Info(fmt.Sprintf("Number of elements decoded: %d", len(decoded)))
 		slog.Info(fmt.Sprintf("Number of characters: %d", end))
-		jsonOutput, _ := json.Marshal(decoded[0])
-		fmt.Println(string(jsonOutput))
+		slog.Info(fmt.Sprintf("elems from decode: %#v", decoded))
+		for _, d := range decoded {
+			jsonOutput, err := json.Marshal(d)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(jsonOutput))
+		}
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
