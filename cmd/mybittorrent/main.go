@@ -26,7 +26,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		slog.Info("list detected")
 		encodedL, end := decodeBencode(bencodedString, []interface{}{}, start+1)
 		elems = append(elems, encodedL)
-		return decodeBencode(bencodedString, elems, start+end)
+		return decodeBencode(bencodedString, elems, end)
 	} else if rune(bencodedString[start]) == 'e' {
 		slog.Info("detected end")
 		return decodeBencode(bencodedString, elems, start+1)
@@ -50,7 +50,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		return decodeBencode(bencodedString, elems, firstColonIndex+1+length)
 	} else if rune(bencodedString[start]) == 'i' {
 		slog.Info("integer detected")
-		l := peekUntil(bencodedString, start, 'e') + 1
+		l := peekUntil(bencodedString, start, 'e')
 		startI := start + 1
 		i, err := strconv.Atoi(bencodedString[startI:l])
 		if err != nil {
@@ -58,7 +58,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		}
 		elem := i
 		elems = append(elems, elem)
-		return decodeBencode(bencodedString, elems, l)
+		return decodeBencode(bencodedString, elems, l+1)
 	} else {
 		panic("not supported type")
 	}
@@ -91,7 +91,7 @@ func main() {
 func peekUntil(s string, start int, charEnd rune) int {
 	for i := start; i < len(s); i++ {
 		if s[i] == byte(charEnd) {
-			return i - 1
+			return i
 		}
 	}
 	panic("cannot find peek char")
