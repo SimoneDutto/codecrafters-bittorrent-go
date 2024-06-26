@@ -3,28 +3,19 @@ package main
 import (
 	// Uncomment this line to pass the first stage
 	// "encoding/json"
+
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
-	"reflect"
 	"strconv"
 	"unicode"
 
-	bencode "github.com/jackpal/bencode-go" // Available if you need it!
+	"github.com/jackpal/bencode-go"
+	// Available if you need it!
 	// Available if you need it!
 )
-
-func doubleCheck(beMine interface{}) {
-	file, _ := os.Open("sample.torrent")
-	i, err := bencode.Decode(file)
-	if err != nil {
-		panic(err)
-	}
-
-	slog.Info(fmt.Sprintf("bencoded from lib %#v", i))
-	reflect.DeepEqual(i, beMine)
-}
 
 // Example:
 // - 5:hello -> hello
@@ -92,6 +83,16 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 	}
 }
 
+// TODO: remove lib and implement it yourself
+func bencodeBencode(val interface{}) string {
+	b := new(bytes.Buffer)
+	err := bencode.Marshal(b, val)
+	if err != nil {
+		panic(err)
+	}
+	return b.String()
+}
+
 func init() {
 	if level, err := strconv.ParseBool(os.Getenv("LOG")); err != nil || !level {
 		slog.SetLogLoggerLevel(slog.LevelError)
@@ -133,11 +134,7 @@ func main() {
 			panic("cannot get map info from metainfo")
 		}
 		fmt.Printf("Length: %d\n", infoM["length"])
-		jsonOutput, err := json.Marshal(infoM)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Info Hash: %s", calcSha1(jsonOutput))
+		fmt.Printf("Info Hash: %s", calcSha1([]byte(bencodeBencode(infoM))))
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
