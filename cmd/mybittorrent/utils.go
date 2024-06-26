@@ -5,7 +5,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
+	"time"
 )
 
 func peekUntil(s string, start int, charEnd rune) int {
@@ -70,4 +72,26 @@ func extractPeers(pi interface{}) []string {
 		peers[i/6] = ip
 	}
 	return peers
+}
+
+func sendHandskake(endpoint string, infohash []byte) []byte {
+	conn, err := net.Dial("tcp", endpoint)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	handshakeMessage := []byte{byte(19)}
+	handshakeMessage = append(handshakeMessage, []byte("BitTorrent protocol00000000")...)
+	handshakeMessage = append(handshakeMessage, infohash...)
+	handshakeMessage = append(handshakeMessage, []byte("00112233445566778899")...)
+	slog.Info(fmt.Sprintf("len %d\n", len(handshakeMessage)))
+	conn.Write(handshakeMessage)
+	res := make([]byte, 68)
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	n, err := conn.Read(res)
+	if err != nil || n != 68 {
+		slog.Error(err.Error())
+		panic("cannot receive handshake")
+	}
+	return res
 }

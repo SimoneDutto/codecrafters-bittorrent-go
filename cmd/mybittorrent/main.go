@@ -165,6 +165,18 @@ func main() {
 		for _, p := range peers {
 			fmt.Println(p)
 		}
+	} else if command == "handshake" {
+		file := os.Args[2]
+		endpoint := os.Args[3]
+		bF, err := os.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
+		_, infoM := extractInfo(decoded[0])
+		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
+		res := sendHandskake(endpoint, hashInfo)
+		fmt.Printf("Peer ID: %s\n", hex.EncodeToString(res[len(res)-20:]))
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
