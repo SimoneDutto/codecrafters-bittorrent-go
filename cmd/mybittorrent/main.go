@@ -7,17 +7,23 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 	"strconv"
 	"unicode"
-	// bencode "github.com/jackpal/bencode-go" // Available if you need it!
+
+	bencode "github.com/jackpal/bencode-go" // Available if you need it!
+	// Available if you need it!
 )
 
-type Bee struct {
-	v interface{}
-}
+func doubleCheck(beMine interface{}) {
+	file, _ := os.Open("sample.torrent")
+	i, err := bencode.Decode(file)
+	if err != nil {
+		panic(err)
+	}
 
-func (*Bee) PushElem(elem interface{}) {
-
+	slog.Info(fmt.Sprintf("bencoded from lib %#v", i))
+	reflect.DeepEqual(i, beMine)
 }
 
 // Example:
@@ -78,7 +84,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		if err != nil {
 			panic("cannot convert string to int")
 		}
-		elem := i
+		elem := int64(i)
 		elems = append(elems, elem)
 		return decodeBencode(bencodedString, elems, l+1)
 	} else {

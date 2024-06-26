@@ -10,4 +10,7 @@ module github.com/codecrafters-io/bittorrent-starter-go
 
 go 1.22
 
-require github.com/jackpal/bencode-go v1.0.0 // indirect
+require (
+	github.com/go-test/deep v1.1.1 // indirect
+	github.com/jackpal/bencode-go v1.0.2 // indirect
+)
