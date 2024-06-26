@@ -5,6 +5,7 @@ import (
 	// "encoding/json"
 
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,20 +24,20 @@ import (
 // - 5:hello -> hello
 // - 10:hello12345 -> hello12345
 func decodeBencode(bencodedString string, elems []interface{}, start int) ([]interface{}, int) {
-	slog.Info(fmt.Sprintf("start: %d", start))
-	slog.Info(fmt.Sprintf("elems: %#v", elems))
+	slog.Debug(fmt.Sprintf("start: %d", start))
+	slog.Debug(fmt.Sprintf("elems: %#v", elems))
 	if len(bencodedString) == start {
 		return elems, start
 	}
-	slog.Info(fmt.Sprintf("start char %s", bencodedString[start:]))
+	slog.Debug(fmt.Sprintf("start char %s", bencodedString[start:]))
 	if rune(bencodedString[start]) == 'l' {
-		slog.Info("list detected")
+		slog.Debug("list detected")
 		encodedL, end := decodeBencode(bencodedString, []interface{}{}, start+1)
-		slog.Info(fmt.Sprintf("elems from list: %#v", encodedL))
+		slog.Debug(fmt.Sprintf("elems from list: %#v", encodedL))
 		elems = append(elems, encodedL)
 		return decodeBencode(bencodedString, elems, end)
 	} else if rune(bencodedString[start]) == 'e' {
-		slog.Info("detected end")
+		slog.Debug("detected end")
 		return elems, start + 1
 	} else if rune(bencodedString[start]) == 'd' {
 		encodedL, end := decodeBencode(bencodedString, []interface{}{}, start+1)
@@ -48,11 +49,11 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 			}
 			m[val] = encodedL[i+1]
 		}
-		slog.Info(fmt.Sprintf("elems from map: %#v", m))
+		slog.Debug(fmt.Sprintf("elems from map: %#v", m))
 		elems = append(elems, m)
 		return decodeBencode(bencodedString, elems, end)
 	} else if unicode.IsDigit(rune(bencodedString[start])) {
-		slog.Info("string detected")
+		slog.Debug("string detected")
 		var firstColonIndex int
 		for i := start; i < len(bencodedString); i++ {
 			if bencodedString[i] == ':' {
@@ -70,7 +71,7 @@ func decodeBencode(bencodedString string, elems []interface{}, start int) ([]int
 		elems = append(elems, elem)
 		return decodeBencode(bencodedString, elems, firstColonIndex+1+length)
 	} else if rune(bencodedString[start]) == 'i' {
-		slog.Info("integer detected")
+		slog.Debug("integer detected")
 		l := peekUntil(bencodedString, start, 'e')
 		startI := start + 1
 		i, err := strconv.Atoi(bencodedString[startI:l])
@@ -129,7 +130,7 @@ func main() {
 		announce, infoM := extractInfo(decoded[0])
 		fmt.Printf("Tracker URL: %s\n", announce)
 		fmt.Printf("Length: %d\n", infoM["length"])
-		fmt.Printf("Info Hash: %s\n", calcSha1([]byte(bencodeBencode(infoM))))
+		fmt.Printf("Info Hash: %s\n", hex.EncodeToString(([]byte(bencodeBencode(infoM)))))
 		fmt.Printf("Piece Length: %d\n", infoM["piece length"])
 		fmt.Println("Piece Hashes:")
 		pieces := extractPiece(infoM["pieces"])
@@ -144,23 +145,25 @@ func main() {
 		}
 		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
 		announce, infoM := extractInfo(decoded[0])
-		for _, h := range extractPiece(infoM["pieces"]) {
-			req, err := http.NewRequest("GET", announce, nil)
-			if err != nil {
-				panic(err)
-			}
-			req.URL.RawQuery = prepareRequest(h, infoM["piece length"].(int64))
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				panic(err)
-			}
-			defer resp.Body.Close()
-			fmt.Println("Status:", resp.Status)
-			data, err := io.ReadAll(resp.Body)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(string(data))
+		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
+		query := prepareRequest(string(hashInfo), infoM["piece length"].(int64))
+		URL := fmt.Sprintf("%s?%s", announce, query)
+		slog.Info(URL)
+		resp, err := http.Get(URL)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		decoded, _ = decodeBencode(string(data), []interface{}{}, 0)
+		slog.Info(fmt.Sprintf("Response: %#v", decoded[0]))
+		peers := extractPeers(decoded[0].(map[string]interface{})["peers"])
+		slog.Info(fmt.Sprintf("extracted %d peers\n", len(peers)))
+		for _, p := range peers {
+			fmt.Println(p)
 		}
 	} else {
 		fmt.Println("Unknown command: " + command)
