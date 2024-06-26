@@ -124,26 +124,18 @@ func main() {
 			panic(err)
 		}
 		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
-		metaInfo, ok := decoded[0].(map[string]interface{})
-		if !ok {
-			panic("cannot get map from decoded file")
-		}
-		fmt.Printf("Tracker URL: %s\n", metaInfo["announce"])
-		infoM, ok := metaInfo["info"].(map[string]interface{})
-		if !ok {
-			panic("cannot get map info from metainfo")
-		}
+		announce, infoM := extractInfo(decoded[0])
+		fmt.Printf("Tracker URL: %s\n", announce)
 		fmt.Printf("Length: %d\n", infoM["length"])
 		fmt.Printf("Info Hash: %s\n", calcSha1([]byte(bencodeBencode(infoM))))
 		fmt.Printf("Piece Length: %d\n", infoM["piece length"])
-		pieces, ok := infoM["pieces"].(string)
-		if !ok {
-			panic("pieces is not a string")
-		}
 		fmt.Println("Piece Hashes:")
-		for i := 0; i < len(pieces); i += 20 {
-			fmt.Printf("%x\n", pieces[i:(i+20)])
+		pieces := extractPiece(infoM["pieces"])
+		for _, p := range pieces {
+			fmt.Println(p)
 		}
+	} else if command == "peers" {
+
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
