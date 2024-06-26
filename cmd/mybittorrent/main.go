@@ -8,9 +8,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
+	"math/rand"
+	"net"
 	"os"
 	"strconv"
 	"unicode"
@@ -104,7 +104,6 @@ func init() {
 
 func main() {
 	slog.Info("Logs from your program will appear here!")
-
 	command := os.Args[1]
 
 	if command == "decode" {
@@ -146,21 +145,7 @@ func main() {
 		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
 		announce, infoM := extractInfo(decoded[0])
 		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
-		query := prepareRequest(string(hashInfo), infoM["piece length"].(int64))
-		URL := fmt.Sprintf("%s?%s", announce, query)
-		slog.Info(URL)
-		resp, err := http.Get(URL)
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		decoded, _ = decodeBencode(string(data), []interface{}{}, 0)
-		slog.Info(fmt.Sprintf("Response: %#v", decoded[0]))
-		peers := extractPeers(decoded[0].(map[string]interface{})["peers"])
+		peers := getPeers(announce, hashInfo, infoM["piece length"])
 		slog.Info(fmt.Sprintf("extracted %d peers\n", len(peers)))
 		for _, p := range peers {
 			fmt.Println(p)
@@ -175,8 +160,32 @@ func main() {
 		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
 		_, infoM := extractInfo(decoded[0])
 		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
-		res := sendHandskake(endpoint, hashInfo)
+		conn, err := net.Dial("tcp", endpoint)
+		if err != nil {
+			panic(err)
+		}
+		defer conn.Close()
+		res := sendHandskake(conn, hashInfo)
 		fmt.Printf("Peer ID: %s\n", hex.EncodeToString(res[len(res)-20:]))
+	} else if command == "download_piece" {
+		file := os.Args[4]
+		bF, err := os.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
+		announce, infoM := extractInfo(decoded[0])
+		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
+		peers := getPeers(announce, hashInfo, infoM["piece length"])
+		endpoint := peers[rand.Intn(len(peers))]
+		conn, err := net.Dial("tcp", endpoint)
+		if err != nil {
+			panic(err)
+		}
+		defer conn.Close()
+		res := sendHandskake(conn, hashInfo)
+		fmt.Printf("Handshake: %s\n", res)
+		unchoke(conn)
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
