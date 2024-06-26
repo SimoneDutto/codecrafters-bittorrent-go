@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 )
 
 func peekUntil(s string, start int, charEnd rune) int {
@@ -40,7 +41,19 @@ func extractPiece(v interface{}) []string {
 		panic("pieces is not a string")
 	}
 	for i := 0; i < len(p); i += 20 {
-		pieces = append(pieces, fmt.Sprintf("%x", p[i:(i+20)]))
+		pieces = append(pieces, p[i:(i+20)])
 	}
 	return pieces
+}
+
+func prepareRequest(hash string, length int64) string {
+	params := url.Values{}
+	params.Add("info_hash", hash)
+	params.Add("peer_id", "01238183173107890890")
+	params.Add("port", "6881")
+	params.Add("uploaded", "0")
+	params.Add("downloaded", "0")
+	params.Add("left", fmt.Sprint(length))
+	params.Add("compact", "1")
+	return params.Encode()
 }

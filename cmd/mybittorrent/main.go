@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"strconv"
 	"unicode"
@@ -132,10 +134,34 @@ func main() {
 		fmt.Println("Piece Hashes:")
 		pieces := extractPiece(infoM["pieces"])
 		for _, p := range pieces {
-			fmt.Println(p)
+			fmt.Printf("%x\n", p)
 		}
 	} else if command == "peers" {
-
+		file := os.Args[2]
+		bF, err := os.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
+		announce, infoM := extractInfo(decoded[0])
+		for _, h := range extractPiece(infoM["pieces"]) {
+			req, err := http.NewRequest("GET", announce, nil)
+			if err != nil {
+				panic(err)
+			}
+			req.URL.RawQuery = prepareRequest(h, infoM["piece length"].(int64))
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+			fmt.Println("Status:", resp.Status)
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(data))
+		}
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
