@@ -130,7 +130,7 @@ func main() {
 		announce, infoM := extractInfo(decoded[0])
 		fmt.Printf("Tracker URL: %s\n", announce)
 		fmt.Printf("Length: %d\n", infoM["length"])
-		fmt.Printf("Info Hash: %s\n", hex.EncodeToString(([]byte(bencodeBencode(infoM)))))
+		fmt.Printf("Info Hash: %s\n", hex.EncodeToString(calcSha1([]byte(bencodeBencode(infoM)))))
 		fmt.Printf("Piece Length: %d\n", infoM["piece length"])
 		fmt.Println("Piece Hashes:")
 		pieces := extractPiece(infoM["pieces"])
