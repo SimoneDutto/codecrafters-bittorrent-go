@@ -134,7 +134,13 @@ func main() {
 			panic("cannot get map info from metainfo")
 		}
 		fmt.Printf("Length: %d\n", infoM["length"])
-		fmt.Printf("Info Hash: %s", calcSha1([]byte(bencodeBencode(infoM))))
+		fmt.Printf("Info Hash: %s\n", calcSha1([]byte(bencodeBencode(infoM))))
+		fmt.Printf("Piece Length: %s\n", infoM["piece length"])
+		if hashes, ok := infoM["pieces"].([]string); ok {
+			for _, h := range hashes {
+				fmt.Printf("Piece Hashes: %s\n", h)
+			}
+		}
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
