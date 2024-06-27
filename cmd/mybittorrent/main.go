@@ -177,6 +177,7 @@ func main() {
 		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
 		announce, infoM := extractInfo(decoded[0])
 		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
+		slog.Info(fmt.Sprintf("InfoM: %#v\n", infoM))
 		peers := getPeers(announce, hashInfo, infoM["piece length"])
 		endpoint := peers[0]
 		conn, err := net.Dial("tcp", endpoint)
@@ -187,9 +188,12 @@ func main() {
 		res := sendHandskake(conn, hashInfo)
 		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
 		unchoke(conn)
-		piece := downloadPiece(conn, uint32(n), uint32(infoM["piece length"].(int64)))
+		piece, err := downloadPiece(conn, uint32(n), uint32(infoM["piece length"].(int64)))
+		if err != nil {
+			panic(err)
+		}
 		slog.Info(fmt.Sprintf("Piece: %#v\n", piece))
-		err = os.WriteFile(fileO, piece, 0664)
+		err = os.WriteFile(fileO, piece[8:], 0664)
 		if err != nil {
 			panic(err)
 		}

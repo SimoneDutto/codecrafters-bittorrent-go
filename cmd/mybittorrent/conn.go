@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -58,26 +59,28 @@ func unchoke(conn net.Conn) {
 	readFromConn(conn, 1)
 }
 
-func downloadPiece(conn net.Conn, n uint32, length uint32) []byte {
+func downloadPiece(conn net.Conn, n uint32, length uint32) ([]byte, error) {
 	payloadrequest := []byte{}
 	var chunkSize uint32 = 16 * 1024
 	begin := n * uint32(chunkSize)
-	reqSize := (length - begin) % chunkSize
+	var reqSize uint32
+	if n*chunkSize > length {
+		reqSize = (length - begin) % (chunkSize)
+	} else {
+		reqSize = chunkSize
+	}
+	if reqSize == 0 {
+		return []byte{}, errors.New("finished")
+	}
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, n)       //index
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)   //begin
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, reqSize) // lenght
 	slog.Warn("---------SENDING REQUEST----------")
 	sendToConn(conn, 6, payloadrequest)
 	slog.Warn("---------READING PIECE----------")
-	_ = readFromConn(conn, 7)
-	payload := make([]byte, reqSize)
-	nDl, err := conn.Read(payload)
-	if nDl != int(reqSize) {
-		panic("bad download")
-	}
-	if err != nil {
-		panic(err)
-	}
+	payload := readFromConn(conn, 7)
+	slog.Info(fmt.Sprintf("Read %d bytes of %d length payload\n", len(payload), length))
+	return payload, nil
 }
 
 func readFromConn(conn net.Conn, msgId uint8) []byte {
@@ -96,10 +99,10 @@ func readFromConn(conn net.Conn, msgId uint8) []byte {
 	slog.Info(fmt.Sprintf("Payload length: %d\n", length))
 	slog.Info(fmt.Sprintf("Read message with %d msgid\n", msgId))
 	msg := make([]byte, length)
-	n, err = conn.Read(msg)
+	n, err = io.ReadFull(conn, msg)
 	if n != int(length) {
 		slog.Info(fmt.Sprintf("Read %d instead of %d\n", n, length))
-		// panic("not read enough data")
+		panic("not read enough data")
 	}
 	id := msg[0]
 	if msgId != id {
