@@ -193,7 +193,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		piece := downloadPiece(conn, fileO, uint32(n), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
+		piece := downloadPiece(conn, uint32(n), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
 		f.Write(piece)
 	} else if command == "download" {
 		file := os.Args[4]
@@ -221,7 +221,7 @@ func main() {
 			panic(err)
 		}
 		for i := range extractPiece(infoM["pieces"]) {
-			piece := downloadPiece(conn, fileO, uint32(i), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
+			piece := downloadPiece(conn, uint32(i), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
 			f.Write(piece)
 		}
 

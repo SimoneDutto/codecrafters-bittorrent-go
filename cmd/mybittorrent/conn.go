@@ -59,8 +59,7 @@ func unchoke(conn net.Conn) {
 	readFromConn(conn, 1)
 }
 
-func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint32, length uint32) []byte {
-	var byteAcc uint32 = 0
+func downloadPiece(conn net.Conn, pieceIdx uint32, pLength uint32, length uint32) []byte {
 	remaining := length - (pieceIdx * pLength)
 	if remaining < pLength {
 		pLength = remaining
@@ -68,7 +67,7 @@ func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint
 	piece := make([]byte, pLength)
 	nBlocks := math.Ceil(float64(pLength) / (16 * 1024))
 	for i := 0; i < int(nBlocks); i++ {
-		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, pLength))
+		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d----------\n", i, pLength))
 		block := downloadBlock(conn, pieceIdx, uint32(i), pLength)
 		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
 		_ = binary.BigEndian.Uint32(block[0:4])
