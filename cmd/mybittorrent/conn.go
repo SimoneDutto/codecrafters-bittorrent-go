@@ -65,12 +65,13 @@ func downloadPiece(conn net.Conn, filename string, n uint32, length uint32) {
 		panic(err)
 	}
 	var i uint32 = 0
-	for n != length {
+	var byteAcc uint32 = 0
+	for byteAcc != length {
 		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d----------\n", i, n))
 		block := downloadBlock(conn, i, length)
 		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
 		file.Write(block[:8])
-		n += uint32(len(block) - 8)
+		byteAcc += uint32(len(block) - 8)
 		i++
 	}
 }
