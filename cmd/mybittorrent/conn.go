@@ -73,6 +73,12 @@ func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint
 		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, pLength))
 		block := downloadBlock(conn, pieceIdx, i, pLength)
 		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
+		msgIndex := binary.BigEndian.Uint32(block[0:4])
+		msgBegin := binary.BigEndian.Uint32(block[4:8])
+
+		if msgIndex != uint32(pieceIdx) || msgBegin != uint32(byteAcc) {
+			panic(fmt.Sprintf("index or offset is wrong %d %d", msgIndex, byteAcc))
+		}
 		file.Write(block[:8])
 		byteAcc += uint32(len(block) - 8)
 		i++
