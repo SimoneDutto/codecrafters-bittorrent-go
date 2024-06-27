@@ -62,13 +62,22 @@ func downloadPiece(conn net.Conn, n uint32, length uint32) []byte {
 	payloadrequest := []byte{}
 	var chunkSize uint32 = 16 * 1024
 	begin := n * uint32(chunkSize)
-	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, n)                        //index
-	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)                    //begin
-	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, (length-begin)%chunkSize) // lenght
+	reqSize := (length - begin) % chunkSize
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, n)       //index
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)   //begin
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, reqSize) // lenght
 	slog.Warn("---------SENDING REQUEST----------")
 	sendToConn(conn, 6, payloadrequest)
 	slog.Warn("---------READING PIECE----------")
-	return readFromConn(conn, 7)
+	_ = readFromConn(conn, 7)
+	payload := make([]byte, reqSize)
+	nDl, err := conn.Read(payload)
+	if nDl != int(reqSize) {
+		panic("bad download")
+	}
+	if err != nil {
+		panic(err)
+	}
 }
 
 func readFromConn(conn net.Conn, msgId uint8) []byte {
