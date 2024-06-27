@@ -66,8 +66,9 @@ func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint
 	}
 	var i uint32 = 0
 	var byteAcc uint32 = 0
-	if pieceIdx*pLength > length {
-		pLength = (length - (pieceIdx - 1*pLength)) % pLength
+	remaining := length - (pieceIdx * pLength)
+	if remaining < pLength {
+		pLength = remaining
 	}
 	for byteAcc != pLength {
 		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, pLength))
