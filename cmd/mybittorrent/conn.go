@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -64,26 +65,29 @@ func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint
 	if err != nil {
 		panic(err)
 	}
-	var i uint32 = 0
 	var byteAcc uint32 = 0
 	remaining := length - (pieceIdx * pLength)
 	if remaining < pLength {
 		pLength = remaining
 	}
-	for byteAcc != pLength {
+	piece := make([]byte, pLength)
+	nBlocks := math.Ceil(float64(pLength) / (16 * 1024))
+	blockC := make(chan []byte, int(nBlocks))
+	for i := 0; i < int(nBlocks); i++ {
 		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, pLength))
-		block := downloadBlock(conn, pieceIdx, i, pLength)
-		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
-		msgIndex := binary.BigEndian.Uint32(block[0:4])
-		msgBegin := binary.BigEndian.Uint32(block[4:8])
-
-		if msgIndex != uint32(pieceIdx) || msgBegin != uint32(byteAcc) {
-			panic(fmt.Sprintf("index or offset is wrong %d %d", msgIndex, byteAcc))
-		}
-		file.Write(block[8:])
-		byteAcc += uint32(len(block) - 8)
-		i++
+		go func() {
+			block := downloadBlock(conn, pieceIdx, uint32(i), pLength)
+			blockC <- block
+		}()
 	}
+	for i := 0; i < int(nBlocks); i++ {
+		block := <-blockC
+		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
+		_ = binary.BigEndian.Uint32(block[0:4])
+		msgBegin := binary.BigEndian.Uint32(block[4:8])
+		copy(piece[msgBegin:], block[8:])
+	}
+	file.Write(piece)
 }
 
 func downloadBlock(conn net.Conn, pieceIdx uint32, n uint32, length uint32) []byte {
