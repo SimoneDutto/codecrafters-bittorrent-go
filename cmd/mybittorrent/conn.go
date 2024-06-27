@@ -99,7 +99,7 @@ func downloadBlock(conn net.Conn, n uint32, length uint32) []byte {
 
 func readFromConn(conn net.Conn, msgId uint8) []byte {
 	h := make([]byte, 4)
-	n, err := conn.Read(h)
+	n, err := io.ReadFull(conn, h)
 	if n != 4 {
 		slog.Error(fmt.Sprintf("not reading 4 bytes but %d\n", n))
 		panic("not read enough data")
