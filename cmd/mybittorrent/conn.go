@@ -65,11 +65,12 @@ func downloadPiece(conn net.Conn, filename string, n uint32, length uint32) {
 		panic(err)
 	}
 	var i uint32 = 0
-	for n == length {
+	for n != length {
+		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d----------\n", i, n))
 		block := downloadBlock(conn, i, length)
 		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
 		file.Write(block[:8])
-		n += uint32(len(block))
+		n += uint32(len(block) - 8)
 		i++
 	}
 }
@@ -125,7 +126,7 @@ func readFromConn(conn net.Conn, msgId uint8) []byte {
 		slog.Error(err.Error())
 		panic("cannot read from conn")
 	}
-	slog.Info(fmt.Sprintf("Received: %#v\n", msg))
+	// slog.Info(fmt.Sprintf("Received: %#v\n", msg))
 	return msg[1:]
 }
 

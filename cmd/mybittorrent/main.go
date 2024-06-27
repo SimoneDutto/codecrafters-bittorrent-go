@@ -188,15 +188,7 @@ func main() {
 		res := sendHandskake(conn, hashInfo)
 		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
 		unchoke(conn)
-		piece, err := downloadPiece(conn, uint32(n), uint32(infoM["piece length"].(int64)))
-		if err != nil {
-			panic(err)
-		}
-		slog.Info(fmt.Sprintf("Piece: %#v\n", piece))
-		err = os.WriteFile(fileO, piece[8:], 0664)
-		if err != nil {
-			panic(err)
-		}
+		downloadPiece(conn, fileO, uint32(n), uint32(infoM["piece length"].(int64)))
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
