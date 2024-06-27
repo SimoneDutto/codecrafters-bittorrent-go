@@ -7,11 +7,10 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"time"
 )
 
 func sendHandskake(conn net.Conn, infohash []byte) []byte {
-	handshakeMessage := []byte{byte(19)}
+	handshakeMessage := []byte{19}
 	handshakeMessage = append(handshakeMessage, []byte("BitTorrent protocol")...)
 	handshakeMessage = binary.BigEndian.AppendUint64(handshakeMessage, 0)
 	handshakeMessage = append(handshakeMessage, infohash...)
@@ -23,7 +22,7 @@ func sendHandskake(conn net.Conn, infohash []byte) []byte {
 		panic("cannot send handshake")
 	}
 	res := make([]byte, 68)
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	// conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	n, err = conn.Read(res)
 	if err != nil || n != 68 {
 		slog.Error(err.Error())
@@ -60,46 +59,63 @@ func unchoke(conn net.Conn) {
 }
 
 func readFromConn(conn net.Conn, msgId uint8) []byte {
-	h := make([]byte, 5)
+	h := make([]byte, 4)
 	n, err := conn.Read(h)
-	if err != nil || n != 5 {
+	if n != 4 {
+		slog.Error(fmt.Sprintf("not reading 4 bytes but %d\n", n))
+		panic("not read enough data")
+	}
+	if err != nil {
 		slog.Error(err.Error())
 		panic("cannot read from conn")
 	}
 	slog.Info(fmt.Sprintf("receiving header: %#v\n", h))
-	// length := binary.BigEndian.Uint32(h[:4])
-	length := 100
+	length := binary.BigEndian.Uint32(h)
 	slog.Info(fmt.Sprintf("Payload length: %d\n", length))
-	id := uint8(h[4])
+	slog.Info(fmt.Sprintf("Read message with %d msgid\n", msgId))
+	msg := make([]byte, length)
+	n, err = conn.Read(msg)
+	if n != int(length) {
+		slog.Info(fmt.Sprintf("Read %d instead of %d\n", n, length))
+		// panic("not read enough data")
+	}
+	id := msg[0]
 	if msgId != id {
 		panic(fmt.Sprintf("Message id %d not equal to expected %d", id, msgId))
 	}
-	if length == 0 {
-		return []byte{}
+	if err != nil {
+		slog.Error(fmt.Sprint(n))
+		slog.Error(err.Error())
+		panic("cannot read from conn")
 	}
-	slog.Info(fmt.Sprintf("Read message with %d msgid\n", msgId))
-	// msg := make([]byte, int(length))
-	// n, err = conn.Read(msg)
-	// if err != nil || n != int(length) {
-	// 	slog.Error(err.Error())
-	// 	panic("cannot read from conn")
-	// }
-	// slog.Info(fmt.Sprintf("Received: %#v\n", msg))
-	return []byte{}
+	slog.Info(fmt.Sprintf("Received: %#v\n", msg))
+	return msg[1:]
 }
 
 func sendToConn(conn net.Conn, msgId uint8, payload []byte) {
-	pLength := len(payload)
-	h := make([]byte, 0, 5)
+	pLength := len(payload) + 1
+	h := make([]byte, 0, 4)
 	h = binary.BigEndian.AppendUint32(h, uint32(pLength))
-	h = append(h, byte(msgId))
 	slog.Info(fmt.Sprintf("sending header: %#v\n", h))
 	n, err := conn.Write(h)
-	if err != nil || n != 5 {
+	if n != 4 {
+		slog.Error(fmt.Sprint(n))
+		panic("cannot write size")
+	}
+	if err != nil {
 		slog.Error(err.Error())
 		panic("cannot write to conn")
 	}
-	if pLength == 0 {
-		return
+	msg := make([]byte, 1, pLength)
+	msg[0] = msgId
+	msg = append(msg, payload...)
+	n, err = conn.Write(msg)
+	if n != pLength {
+		slog.Error(fmt.Sprint(n))
+		panic("cannot write payload")
+	}
+	if err != nil {
+		slog.Error(err.Error())
+		panic("cannot write to conn")
 	}
 }

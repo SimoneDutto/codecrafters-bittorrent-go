@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -177,14 +176,14 @@ func main() {
 		announce, infoM := extractInfo(decoded[0])
 		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
 		peers := getPeers(announce, hashInfo, infoM["piece length"])
-		endpoint := peers[rand.Intn(len(peers))]
+		endpoint := peers[0]
 		conn, err := net.Dial("tcp", endpoint)
 		if err != nil {
 			panic(err)
 		}
 		defer conn.Close()
 		res := sendHandskake(conn, hashInfo)
-		fmt.Printf("Handshake: %s\n", res)
+		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
 		unchoke(conn)
 	} else {
 		fmt.Println("Unknown command: " + command)
