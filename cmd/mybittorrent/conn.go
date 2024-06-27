@@ -59,19 +59,19 @@ func unchoke(conn net.Conn) {
 	readFromConn(conn, 1)
 }
 
-func downloadPiece(conn net.Conn, filename string, n uint32, pLength uint32, length uint32) {
+func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint32, length uint32) {
 	file, err := os.Create(filename)
 	if err != nil {
 		panic(err)
 	}
 	var i uint32 = 0
 	var byteAcc uint32 = 0
-	if n*pLength > length {
-		pLength = length % pLength
+	if pieceIdx*pLength > length {
+		pLength = (length - (pieceIdx - 1*pLength)) % pLength
 	}
 	for byteAcc != pLength {
 		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, pLength))
-		block := downloadBlock(conn, i, pLength)
+		block := downloadBlock(conn, pieceIdx, i, pLength)
 		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
 		file.Write(block[:8])
 		byteAcc += uint32(len(block) - 8)
@@ -79,7 +79,7 @@ func downloadPiece(conn net.Conn, filename string, n uint32, pLength uint32, len
 	}
 }
 
-func downloadBlock(conn net.Conn, n uint32, length uint32) []byte {
+func downloadBlock(conn net.Conn, pieceIdx uint32, n uint32, length uint32) []byte {
 	payloadrequest := []byte{}
 	var chunkSize uint32 = 16 * 1024
 	begin := n * uint32(chunkSize)
@@ -89,9 +89,9 @@ func downloadBlock(conn net.Conn, n uint32, length uint32) []byte {
 	} else {
 		reqSize = chunkSize
 	}
-	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, n)       //index
-	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)   //begin
-	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, reqSize) // lenght
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, pieceIdx) //index
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)    //begin
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, reqSize)  // lenght
 	slog.Warn("---------SENDING REQUEST----------")
 	sendToConn(conn, 6, payloadrequest)
 	slog.Warn("---------READING PIECE----------")
