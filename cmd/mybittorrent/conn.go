@@ -59,16 +59,19 @@ func unchoke(conn net.Conn) {
 	readFromConn(conn, 1)
 }
 
-func downloadPiece(conn net.Conn, filename string, n uint32, length uint32) {
+func downloadPiece(conn net.Conn, filename string, n uint32, pLength uint32, length uint32) {
 	file, err := os.Create(filename)
 	if err != nil {
 		panic(err)
 	}
 	var i uint32 = 0
 	var byteAcc uint32 = 0
-	for byteAcc != length {
-		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, length))
-		block := downloadBlock(conn, i, length)
+	if n*pLength > length {
+		pLength = length % pLength
+	}
+	for byteAcc != pLength {
+		slog.Warn(fmt.Sprintf("\n---------READING BLOCK %d tot size %d/%d----------\n", i, byteAcc, pLength))
+		block := downloadBlock(conn, i, pLength)
 		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
 		file.Write(block[:8])
 		byteAcc += uint32(len(block) - 8)

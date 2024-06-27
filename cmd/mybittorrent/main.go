@@ -189,7 +189,7 @@ func main() {
 		res := sendHandskake(conn, hashInfo)
 		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
 		unchoke(conn)
-		downloadPiece(conn, fileO, uint32(n), uint32(infoM["piece length"].(int64)))
+		downloadPiece(conn, fileO, uint32(n), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
