@@ -189,7 +189,42 @@ func main() {
 		res := sendHandskake(conn, hashInfo)
 		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
 		unchoke(conn)
-		downloadPiece(conn, fileO, uint32(n), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
+		f, err := os.Create(fileO)
+		if err != nil {
+			panic(err)
+		}
+		piece := downloadPiece(conn, fileO, uint32(n), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
+		f.Write(piece)
+	} else if command == "download" {
+		file := os.Args[4]
+		fileO := os.Args[3]
+		bF, err := os.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		decoded, _ := decodeBencode(string(bF), []interface{}{}, 0)
+		announce, infoM := extractInfo(decoded[0])
+		hashInfo := calcSha1([]byte(bencodeBencode(infoM)))
+		slog.Info(fmt.Sprintf("InfoM: %#v\n", infoM))
+		peers := getPeers(announce, hashInfo, infoM["piece length"])
+		endpoint := peers[0]
+		conn, err := net.Dial("tcp", endpoint)
+		if err != nil {
+			panic(err)
+		}
+		defer conn.Close()
+		res := sendHandskake(conn, hashInfo)
+		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
+		unchoke(conn)
+		f, err := os.Create(fileO)
+		if err != nil {
+			panic(err)
+		}
+		for i := range extractPiece(infoM["pieces"]) {
+			piece := downloadPiece(conn, fileO, uint32(i), uint32(infoM["piece length"].(int64)), uint32(infoM["length"].(int64)))
+			f.Write(piece)
+		}
+
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
