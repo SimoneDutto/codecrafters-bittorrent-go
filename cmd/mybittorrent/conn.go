@@ -91,8 +91,9 @@ func downloadBlock(conn net.Conn, pieceIdx uint32, n uint32, length uint32) []by
 	var chunkSize uint32 = 16 * 1024
 	begin := n * uint32(chunkSize)
 	reqSize := chunkSize
-	if n*chunkSize > length {
-		reqSize = (length - begin) % (chunkSize)
+	remaining := length - begin
+	if remaining < reqSize {
+		reqSize = remaining
 	}
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, pieceIdx) //index
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)    //begin
