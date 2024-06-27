@@ -60,7 +60,7 @@ func unchoke(conn net.Conn) {
 }
 
 func downloadPiece(conn net.Conn, filename string, n uint32, length uint32) {
-	file, err := os.Open(filename)
+	file, err := os.Create(filename)
 	if err != nil {
 		panic(err)
 	}
