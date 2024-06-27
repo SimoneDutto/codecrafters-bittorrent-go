@@ -79,7 +79,7 @@ func downloadPiece(conn net.Conn, filename string, pieceIdx uint32, pLength uint
 		if msgIndex != uint32(pieceIdx) || msgBegin != uint32(byteAcc) {
 			panic(fmt.Sprintf("index or offset is wrong %d %d", msgIndex, byteAcc))
 		}
-		file.Write(block[:8])
+		file.Write(block[8:])
 		byteAcc += uint32(len(block) - 8)
 		i++
 	}
@@ -89,11 +89,9 @@ func downloadBlock(conn net.Conn, pieceIdx uint32, n uint32, length uint32) []by
 	payloadrequest := []byte{}
 	var chunkSize uint32 = 16 * 1024
 	begin := n * uint32(chunkSize)
-	var reqSize uint32
+	reqSize := chunkSize
 	if n*chunkSize > length {
 		reqSize = (length - begin) % (chunkSize)
-	} else {
-		reqSize = chunkSize
 	}
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, pieceIdx) //index
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)    //begin
@@ -111,7 +109,7 @@ func readFromConn(conn net.Conn, msgId uint8) []byte {
 	n, err := io.ReadFull(conn, h)
 	if n != 4 {
 		slog.Error(fmt.Sprintf("not reading 4 bytes but %d\n", n))
-		panic("not read enough data")
+		panic(err)
 	}
 	if err != nil {
 		slog.Error(err.Error())
