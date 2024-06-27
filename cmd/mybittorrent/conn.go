@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 )
 
 func sendHandskake(conn net.Conn, infohash []byte) []byte {
@@ -59,7 +59,22 @@ func unchoke(conn net.Conn) {
 	readFromConn(conn, 1)
 }
 
-func downloadPiece(conn net.Conn, n uint32, length uint32) ([]byte, error) {
+func downloadPiece(conn net.Conn, filename string, n uint32, length uint32) {
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	var i uint32 = 0
+	for n == length {
+		block := downloadBlock(conn, i, length)
+		slog.Info(fmt.Sprintf("Read block size %d\n", len(block)))
+		file.Write(block[:8])
+		n += uint32(len(block))
+		i++
+	}
+}
+
+func downloadBlock(conn net.Conn, n uint32, length uint32) []byte {
 	payloadrequest := []byte{}
 	var chunkSize uint32 = 16 * 1024
 	begin := n * uint32(chunkSize)
@@ -69,9 +84,6 @@ func downloadPiece(conn net.Conn, n uint32, length uint32) ([]byte, error) {
 	} else {
 		reqSize = chunkSize
 	}
-	if reqSize == 0 {
-		return []byte{}, errors.New("finished")
-	}
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, n)       //index
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)   //begin
 	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, reqSize) // lenght
@@ -80,7 +92,7 @@ func downloadPiece(conn net.Conn, n uint32, length uint32) ([]byte, error) {
 	slog.Warn("---------READING PIECE----------")
 	payload := readFromConn(conn, 7)
 	slog.Info(fmt.Sprintf("Read %d bytes of %d length payload\n", len(payload), length))
-	return payload, nil
+	return payload
 }
 
 func readFromConn(conn net.Conn, msgId uint8) []byte {
