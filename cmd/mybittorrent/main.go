@@ -96,9 +96,10 @@ func bencodeBencode(val interface{}) string {
 }
 
 func init() {
-	if level, err := strconv.ParseBool(os.Getenv("LOG")); err != nil || !level {
-		slog.SetLogLoggerLevel(slog.LevelError)
-	}
+	// if level, err := strconv.ParseBool(os.Getenv("LOG")); err != nil || !level {
+	// 	slog.SetLogLoggerLevel(slog.LevelError)
+	// }
+
 }
 
 func main() {
