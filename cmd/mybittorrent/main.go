@@ -168,6 +168,8 @@ func main() {
 		fmt.Printf("Peer ID: %s\n", hex.EncodeToString(res[len(res)-20:]))
 	} else if command == "download_piece" {
 		file := os.Args[4]
+		fileO := os.Args[3]
+		n, _ := strconv.Atoi(os.Args[5])
 		bF, err := os.ReadFile(file)
 		if err != nil {
 			panic(err)
@@ -185,6 +187,12 @@ func main() {
 		res := sendHandskake(conn, hashInfo)
 		slog.Info(fmt.Sprintf("Handshake: %#v\n", res))
 		unchoke(conn)
+		piece := downloadPiece(conn, uint32(n), uint32(infoM["piece length"].(int64)))
+		slog.Info(fmt.Sprintf("Piece: %#v\n", piece))
+		err = os.WriteFile(fileO, piece, 0664)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)

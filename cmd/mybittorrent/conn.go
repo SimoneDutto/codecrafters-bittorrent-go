@@ -58,6 +58,19 @@ func unchoke(conn net.Conn) {
 	readFromConn(conn, 1)
 }
 
+func downloadPiece(conn net.Conn, n uint32, length uint32) []byte {
+	payloadrequest := []byte{}
+	var chunkSize uint32 = 16 * 1024
+	begin := n * uint32(chunkSize)
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, n)                        //index
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, begin)                    //begin
+	payloadrequest = binary.BigEndian.AppendUint32(payloadrequest, (length-begin)%chunkSize) // lenght
+	slog.Warn("---------SENDING REQUEST----------")
+	sendToConn(conn, 6, payloadrequest)
+	slog.Warn("---------READING PIECE----------")
+	return readFromConn(conn, 7)
+}
+
 func readFromConn(conn net.Conn, msgId uint8) []byte {
 	h := make([]byte, 4)
 	n, err := conn.Read(h)
