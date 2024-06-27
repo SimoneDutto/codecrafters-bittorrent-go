@@ -155,6 +155,7 @@ func sendToConn(conn net.Conn, msgId uint8, payload []byte) {
 	msg := make([]byte, 1, pLength)
 	msg[0] = msgId
 	msg = append(msg, payload...)
+	slog.Info(fmt.Sprintf("sending payload: %#v\n", msg))
 	n, err = conn.Write(msg)
 	if n != pLength {
 		slog.Error(fmt.Sprint(n))
